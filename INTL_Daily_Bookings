@@ -1,0 +1,201 @@
+select * from analytics_prod.INTL_Daily_Bookings limit 100;
+;
+drop view if exists analytics.vw_INTL_Daily_Bookings
+;
+grant all on analytics.vw_INTL_Daily_Bookings to reporting_ro, analytics_team;
+;
+create view analytics.vw_INTL_Daily_Bookings as
+select
+  tc.countrycode,
+  tc.region1,
+  tc.date,
+  tc.week_start_date,
+  tc.month_start_date, -- Transaction_Month
+  tc.current_date_sameday,
+  tc.billed_service_start_date,
+  tc.billed_service_end_date,
+  tc.when_processed,
+  tc.Processed_Month,
+  tc.dateprofilecomplete,
+  tc.dateFirstPremiumSignup,
+  tc.subscriptiondatecreated,
+  tc.subscriptionenddate,
+  tc.Upgrade_Quarter,
+  tc.Upgrade_Month,
+  tc.revenue_recognization_date,
+  tc.Month_No,
+  tc.memberid,
+  tc.subscriptionid,
+  tc.transactionid,
+  tc.member_type,
+  tc.ClosedForFraud,
+  tc.referrer,
+  tc.service,
+  tc.vertical,
+  tc.payment_type,
+  tc.sign_up_device,
+  tc.Renewal,
+  tc.Transaction_Type,
+  tc.Booking_Type,
+  tc.Upgrade_Type,
+  tc.subscription_contract_length,
+  tc.source_currency,
+  tc.currency_rate,
+  tc.Members_Survived,
+  tc.Orders,
+  tc.Discounted_Orders,
+  tc.Discounts as 'discounts_local',
+  tc.amount_no_tax as 'amount_local',
+  ifnull(sum(tc.Discounts*tc.currency_rate),0) as 'discounts_USD',
+  ifnull(sum(tc.amount_no_tax*tc.currency_rate),0) as 'amount_USD'
+     from
+      (select
+          t.date_created as 'date',
+          t.week_start_date,
+          t.month_start_date, -- Transaction_Month
+          t.current_date_sameday,
+          t.billed_service_start_date,
+          t.billed_service_end_date,
+          t.when_processed,
+          date(date_trunc('month',t.when_processed)) as 'Processed_Month',
+          t.dateprofilecomplete,
+          t.dateFirstPremiumSignup,
+          t.subscriptiondatecreated,
+          t.subscriptionenddate,
+          concat(concat(concat('Q', quarter(date(date_trunc('month',t.subscriptiondatecreated)))), ' '), year(t.subscriptiondatecreated)) as 'Upgrade_Quarter',
+          t.Upgrade_Month, -- date(date_trunc('month',t.subscriptiondatecreated)) as 'Upgrade_Month',
+          t.revenue_recognization_date,
+          t.Month_No,
+          t.memberid,
+          t.subscriptionid,
+          t.transactionid,
+          t.countrycode,
+          t.region1,
+          t.member_type,
+          t.ClosedForFraud,
+          t.referrer,
+          case 
+            when lower(t.service) in ('cc','childcare','babysitter','childcare?utm_source=careerjet','childcare?utm_source=jooble','childcare?utm_source=marktplaats','nanny','childminder','uk_cc_s_fb_childcare','honorarygrandma') then 'CC'
+            when lower(t.service) in ('hc','hk','homecare','ho','housekeeping','homecare?utm_source=careerjet') then 'HK'
+            when lower(t.service) in ('pc','petcare','dogsitter') then 'PC'
+            when lower(t.service) in ('sc','seniorcare','seniorcare?utm_source=jooble','elderly') then 'SC'
+            when lower(t.service) in ('tt','tutoring') then 'TT'
+            when lower(t.service) in ('sn','specialneeds') then 'SN'
+            when lower(t.service) in ('ap','aupair') then 'AP'
+            when lower(t.service) in ('br','all','general',' general','genera') then 'BR'
+            when t.referrer = 'SEM' and lower(t.service) not in ('cc','childcare','','hk','homecare','ho','housekeeping','pc','petcare','sc','seniorcare','tt','tutoring','sn','specialneeds','ap','aupair','br','all','general',' general','genera') then 'CC'
+            else lower(t.service)
+            end as 'service',
+          t.vertical,
+          t.payment_type,
+          t.sign_up_device,
+          t.Renewal,
+          t.Transaction_Type,
+          t.Booking_Type,
+          t.Upgrade_Type,
+          t.subscription_contract_length,
+          t.source_currency,
+          t.currency_rate,
+          count(distinct memberid) as 'Members_Survived',
+          count(distinct t.transaction_ID) as 'Orders',
+          count(distinct case when t.promotiondiscount > 0 then t.transaction_ID end) as 'Discounted_Orders',
+          ifnull(sum(case when t.date_created = t.subscriptionDateCreated then t.priceplanfee * (t.promotiondiscount/100) end),0) as 'Discounts', 
+          ifnull(sum(t.amount/(1+(t.vat_percentage/100))),0) as 'amount_no_tax'
+            from
+              (select
+                date(t.date_created) as 'date_created',
+                d1.week_start_date,
+                d1.month_start_date, -- Transaction_Month
+                d2.month_start_date as 'Upgrade_Month',
+                cur.current_date_sameday,
+                date(BILLED_SERVICE_START_DATE) as 'billed_service_start_date',
+                date(BILLED_SERVICE_END_DATE) as 'billed_service_end_date',
+                date(t.when_processed) as 'when_processed',
+                date(m.dateProfileComplete) as 'dateprofilecomplete',
+                date(m.dateFirstPremiumSignup) as 'dateFirstPremiumSignup',
+                date(sp.subscriptionDateCreated) as 'subscriptiondatecreated',
+                date(sp.subscriptionEndDate) as 'subscriptionenddate',
+                date(add_months(t.date_created, sp.priceplandurationinmonths)) as 'revenue_recognization_date',
+                datediff('month',d2.month_start_date, d1.month_start_date) as 'Month_No',
+                m.memberid,
+                sp.subscriptionid,
+                t.id as 'transactionId',
+                m.countrycode,
+                p.region1,
+                initcap(m.role) as 'member_type',
+                m.ClosedForFraud,
+                m.channel as 'referrer',
+                lower(m.service) as 'service',
+                case 
+                  when m.vertical = 'homeCare' then 'Housekeeping' 
+                  when (m.vertical IS NULL or m.vertical = '') then 'Childcare' 
+                  else initcap(lower(m.vertical))
+                  end as 'vertical',
+                case 
+                  when m.device = 'smartphone' or m.device = '' or m.device is null then 'Mobile' 
+                  else initcap(lower(m.device))
+                  end as 'sign_up_device',
+                case 
+                  when date(sp.subscriptionDateCreated) = date(t.date_created) then 'First'
+                  when date(sp.subscriptionDateCreated) != date(t.date_created) then 'Renewal'
+                  end as 'Renewal',
+                case 
+                  when t.type in ('AuthAndCapture','PriorAuthCapture') then 'Booking'
+                  when t.type = 'Chargeback' then 'Chargeback'
+                  when t.type = 'Credit' then 'Refund'
+                  end as 'Transaction_Type',
+                case
+                  when date(sp.subscriptionDateCreated) = date(t.date_created) and date(m.dateFirstPremiumSignup) != date(sp.subscriptionDateCreated) then 'Initial_Booking_Reup'
+                  when date(sp.subscriptionDateCreated) = date(t.date_created) and date(m.dateFirstPremiumSignup) = date(sp.subscriptionDateCreated) then 'Initial_Booking_New'
+                  when date(sp.subscriptionDateCreated) != date(t.date_created) and date(m.dateFirstPremiumSignup) != date(sp.subscriptionDateCreated) then 'Recurring_Booking_Reup'
+                  when date(sp.subscriptionDateCreated) != date(t.date_created) and date(m.dateFirstPremiumSignup) = date(sp.subscriptionDateCreated) then 'Recurring_Booking_New'
+                  end as 'Booking_Type',
+                case
+                  when date(subscriptiondatecreated) = date(dateProfileComplete) then 'Day1s'
+                  when date(datefirstpremiumsignup) = date(subscriptiondatecreated) and date(subscriptiondatecreated) != date(dateProfileComplete) then 'NthDays'
+                  when date(datefirstpremiumsignup) != date(subscriptiondatecreated) then 'Reupgrades' 
+                  end as 'Upgrade_Type',
+                sp.pricePlanDurationInMonths as 'subscription_contract_length',
+                sp.promotiondiscount,
+                sp.priceplanfee,
+                cc.payment_type,
+                sp.currency as 'source_currency',
+                fx.currency_rate as 'currency_rate',
+                case when lower(p.country_code) = 'ca' and p.region1 = 'Alberta' then 5
+                  when lower(p.country_code) = 'ca' and p.region1 = 'British Columbia' then 12
+                  when lower(p.country_code) = 'ca' and p.region1 = 'Manitoba' then 12
+                  when lower(p.country_code) = 'ca' and p.region1 = 'New Brunswick' then 15
+                  when lower(p.country_code) = 'ca' and p.region1 = 'Newfoundland' then 15
+                  when lower(p.country_code) = 'ca' and p.region1 = 'Northwest Territories' then 5
+                  when lower(p.country_code) = 'ca' and p.region1 = 'Nova Scotia' then 15
+                  when lower(p.country_code) = 'ca' and p.region1 = 'Nunavut' then 5
+                  when lower(p.country_code) = 'ca' and p.region1 = 'Ontario' then 13
+                  when lower(p.country_code) = 'ca' and p.region1 = 'Prince Edward Island' then 15
+                  when lower(p.country_code) = 'ca' and p.region1 = 'Quebec' then 15
+                  when lower(p.country_code) = 'ca' and p.region1 = 'Saskatchewan' then 11
+                  when lower(p.country_code) = 'ca' and p.region1 = 'Yukon Territory' then 5
+                  else vat.vat_percentage
+                  end as 'vat_percentage',
+                t.id as 'transaction_ID',
+                t.amount
+              from intl.transaction t
+                join intl.hive_subscription_plan sp on sp.subscriptionId = t.subscription_plan_id and sp.countrycode = t.country_code
+                join intl.hive_member m on t.member_id = m.memberid and t.country_code = m.countrycode
+                  and m.IsInternalAccount = 'false'
+                join reporting.dw_d_date d1 on date(t.date_created) = d1.date
+                join reporting.dw_d_date d2 on date(sp.subscriptionDateCreated) = d2.date
+                join analytics.dw_d_date_current cur on d1.date = cur.date
+                join intl.vat_rate vat on vat.vat_region = t.country_code and t.when_processed between vat.from_date and vat.to_date
+                join intl.postcode p on p.zip_key = m.postcode and lower(p.country_code) = m.countrycode
+                join intl.credit_card cc on cc.id = t.credit_card_id and t.member_id = cc.member_id and t.country_code = cc.country_code
+                join reporting.DW_CARE_FX_RATES fx on fx.source_currency = sp.currency
+                  and fx.target_currency = 'USD'
+                  and fx.currency_rate_type = 'Current'
+              where 
+                t.status = 'SUCCESS'  
+                and t.amount > 0
+                and t.type in ('AuthAndCapture','PriorAuthCapture','Chargeback','Credit')
+                -- and date(t.date_created) >= '2016-01-01'
+                and date(t.date_created) <> current_date ) t
+          group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35) tc
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40
