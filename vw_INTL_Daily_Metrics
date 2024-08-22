@@ -1,0 +1,353 @@
+select * from analytics.vw_INTL_Daily_Metrics where year = 2023
+;
+drop view if exists analytics.vw_INTL_Daily_Metrics
+;
+grant all on analytics.vw_INTL_Daily_Metrics to reporting_ro, analytics_team;
+;
+create view analytics.vw_INTL_Daily_Metrics as
+select
+  base_dates.*,
+  ifnull(md.Basic_Seekers,0) as 'Basic_Seekers',
+  ifnull(md.Paid_Basic_Seekers,0) as 'Paid_Basic_Seekers',
+  ifnull(md.Organic_Basic_Seekers,0) as 'Organic_Basic_Seekers',
+  ifnull(md.Seeker_Day1s,0) as 'Seeker_Day1s',
+  ifnull(md.Seeker_NthDays,0) as 'Seeker_NthDays',
+  ifnull(md.Seeker_Reupgrades,0) as 'Seeker_Reupgrades',
+  ifnull(md.New_Seeker_Premiums,0) as 'New_Seeker_Premiums',
+  ifnull(md.Total_Seeker_Premiums,0) as 'Total_Seeker_Premiums',
+  ifnull(md.One_Month_Seeker_Premiums,0) as 'One_Month_Seeker_Premiums',
+  ifnull(md.Three_Month_Seeker_Premiums,0) as 'Three_Month_Seeker_Premiums',
+  ifnull(md.Twelve_Month_Seeker_Premiums,0) as 'Twelve_Month_Seeker_Premiums', 
+  ifnull(md.Paid_Total_Seeker_Premiums,0) as 'Paid_Total_Seeker_Premiums',
+  ifnull(md.Organic_Total_Seeker_Premiums,0) as 'Organic_Total_Seeker_Premiums',
+  ifnull(md.Paid_NewSeeker_Premiums,0) as 'Paid_NewSeeker_Premiums',
+  ifnull(md.Organic_NewSeeker_Premiums,0) as 'Organic_NewSeeker_Premiums',
+  ifnull(md.SEO_NewSeeker_Premiums,0) as 'SEO_NewSeeker_Premiums',
+  ifnull(md.SEM_NewSeeker_Premiums,0) as 'SEM_NewSeeker_Premiums',
+  ifnull(md.FB_NewSeeker_Premiums,0) as 'FB_NewSeeker_Premiums',
+  ifnull(md.Direct_NewSeeker_Premiums,0) as 'Direct_NewSeeker_Premiums',
+  ifnull(md.Basic_Providers,0) as 'Basic_Providers',
+  ifnull(md.Provider_Day1s,0) as 'Provider_Day1s',
+  ifnull(md.Provider_NthDays,0) as 'Provider_NthDays',
+  ifnull(md.Provider_Reupgrades,0) as 'Provider_Reupgrades',
+  ifnull(md.New_Provider_Premiums,0) as 'New_Provider_Premiums',
+  ifnull(md.Total_Provider_Premiums,0) as 'Total_Provider_Premiums',
+  ifnull(vd.Visitors,0) as 'Visitors',
+  ifnull(vd.VHP_Visits,0) as 'VHP_Visits',
+  ifnull(vd.VHP_Bounced,0) as 'VHP_Bounced',
+  ifnull(bookings.Total_Bookings,0) as 'Total_Bookings',
+  ifnull(bookings.Initial_Bookings,0) as 'Initial_Bookings',
+  ifnull(bookings.Renewal_Bookings,0) as 'Renewal_Bookings',
+  ifnull(bookings.Seeker_Total_Bookings,0) as 'Seeker_Total_Bookings',
+  ifnull(bookings.Seeker_Initial_Bookings,0) as 'Seeker_Initial_Bookings',
+  ifnull(bookings.Seeker_New_Initial_Bookings,0) as 'Seeker_New_Initial_Bookings',
+  ifnull(bookings.Seeker_Reup_Initial_Bookings,0) as 'Seeker_Reup_Initial_Bookings',
+  ifnull(bookings.Seeker_Recurring_Bookings,0) as 'Seeker_Recurring_Bookings',
+  ifnull(bookings.Total_Discounts,0) as 'Total_Discounts',
+  ifnull(bookings.Seeker_Discounts,0) as 'Seeker_Discounts',
+  ifnull(bookings.Seeker_Initial_Discounts,0) as 'Seeker_Initial_Discounts',
+  ifnull(bookings.Seeker_Recurring_Discounts,0) as 'Seeker_Recurring_Discounts',
+  ifnull(bookings.Provider_Total_Bookings,0) as 'Provider_Total_Bookings',
+  ifnull(bookings.Provider_Initial_Bookings,0) as 'Provider_Initial_Bookings',
+  ifnull(bookings.Provider_New_Initial_Bookings,0) as 'Provider_New_Initial_Bookings',
+  ifnull(bookings.Provider_Reup_Initial_Bookings,0) as 'Provider_Reup_Initial_Bookings',
+  ifnull(bookings.Provider_Recurring_Bookings,0) as 'Provider_Recurring_Bookings',
+  ifnull(bookings.Provider_Discounts,0) as 'Provider_Discounts',
+  ifnull(bookings.Provider_Initial_Discounts,0) as 'Provider_Initial_Discounts',
+  ifnull(bookings.Provider_Recurring_Discounts,0) as 'Provider_Recurring_Discounts',
+  ifnull(bookings.Orders,0) as 'Orders',
+  ifnull(bookings.Dicounted_Orders,0) as 'Dicounted_Orders',
+  ifnull(renewal.Seeker_Renewals,0) as 'Seeker_Renewals',
+  ifnull(renewal.Seeker_Potential_Renewals,0) as 'Seeker_Potential_Renewals',
+  ifnull(renewal.Seeker_First_Period_Renewals,0) as 'Seeker_First_Period_Renewals',
+  ifnull(renewal.Seeker_First_Period_Potential_Renewals,0) as 'Seeker_First_Period_Potential_Renewals',
+  ifnull(renewal.Seeker_1_Month_Renewals,0) as 'Seeker_1_Month_Renewals',
+  ifnull(renewal.Seeker_1_Month_Potential_Renewals,0) as 'Seeker_1_Month_Potential_Renewals',
+  ifnull(renewal.Seeker_3_Month_Renewals,0) as 'Seeker_3_Month_Renewals',
+  ifnull(renewal.Seeker_3_Month_Potential_Renewals,0) as 'Seeker_3_Month_Potential_Renewals',
+  ifnull(renewal.Seeker_12_Month_Renewals,0) as 'Seeker_12_Month_Renewals',
+  ifnull(renewal.Seeker_12_Month_Potential_Renewals,0) as 'Seeker_12_Month_Potential_Renewals', 
+  ifnull(renewal.Provider_Renewals,0) as 'Provider_Renewals',
+  ifnull(renewal.Provider_Potential_Renewals,0) as 'Provider_Potential_Renewals',
+  ifnull(renewal.Provider_First_Period_Renewals,0) as 'Provider_First_Period_Renewals',
+  ifnull(renewal.Provider_First_Period_Potential_Renewals,0) as 'Provider_First_Period_Potential_Renewals',
+  ifnull(renewal.Provider_1_Month_Renewals,0) as 'Provider_1_Month_Renewals',
+  ifnull(renewal.Provider_1_Month_Potential_Renewals,0) as 'Provider_1_Month_Potential_Renewals',
+  ifnull(renewal.Provider_3_Month_Renewals,0) as 'Provider_3_Month_Renewals',
+  ifnull(renewal.Provider_3_Month_Potential_Renewals,0) as 'Provider_3_Month_Potential_Renewals',
+  ifnull(renewal.Provider_6_Month_Renewals,0) as 'Provider_6_Month_Renewals',
+  ifnull(renewal.Provider_6_Month_Potential_Renewals,0) as 'Provider_6_Month_Potential_Renewals',
+  ifnull(eop.EOP_Premium_Seekers,0) as 'EOP_Premium_Seekers',
+  ifnull(eop.EOP_Premium_Providers,0) as 'EOP_Premium_Providers',
+  ifnull(spend.Total_Spend,0) as 'Total_Spend',
+  ifnull(spend.Seeker_Spend,0) as 'Seeker_Spend',
+  ifnull(spend.Seeker_SEM_FB_Spend,0) as 'Seeker_SEM_FB_Spend',
+  ifnull(spend.Provider_Spend,0) as 'Provider_Spend',
+  ifnull(spend.Provider_SEM_FB_Spend,0) as 'Provider_SEM_FB_Spend',
+  forecast.plan_type as 'plan_type',
+  ifnull(forecast.Plan_Visitors,0) as 'Plan_Visitors',
+  ifnull(forecast.Plan_Basic_Seeker,0) as 'Plan_Basic_Seeker',
+  ifnull(forecast.Plan_Paid_Basic_Seekers,0) as 'Plan_Paid_Basic_Seeker',
+  ifnull(forecast.Plan_Organic_Basic_Seekers,0) as 'Plan_Organic_Basic_Seeker',
+  ifnull(forecast.Plan_Seeker_AllPremiums,0) as 'Plan_Seeker_AllPremiums',
+  ifnull(forecast.Plan_New_Seeker_Premiums,0) as 'Plan_New_Seeker_Premiums',
+  ifnull(forecast.Plan_Paid_New_Seeker_Premiums,0) as 'Plan_Paid_New_Seeker_Premiums',
+  ifnull(forecast.Plan_Organic_New_Seeker_Premiums,0) as 'Plan_Organic_New_Seeker_Premiums',
+  ifnull(forecast.Plan_Paid_Total_Seeker_Premiums,0) as 'Plan_Paid_Total_Seeker_Premiums',
+  ifnull(forecast.Plan_Organic_Total_Seeker_Premiums,0) as 'Plan_Organic_Total_Seeker_Premiums',
+  ifnull(forecast.Plan_Initial_Bookings,0) as 'Plan_Initial_Bookings',
+  ifnull(forecast.Plan_Renewal_Bookings,0) as 'Plan_Renewal_Bookings',
+  ifnull(forecast.Plan_New_Seeker_SEM_Premiums,0) as 'Plan_New_Seeker_SEM_Premiums',
+  ifnull(forecast.Plan_New_Seeker_SEO_Premiums,0) as 'Plan_New_Seeker_SEO_Premiums',
+  ifnull(forecast.Plan_New_Seeker_Direct_Premiums,0) as 'Plan_New_Seeker_Direct_Premiums',
+  ifnull(forecast.Plan_New_Seeker_FB_Premiums,0) as 'Plan_New_Seeker_FB_Premiums',
+  ifnull(forecast.Plan_Seeker_Reupgrades,0) as 'Plan_Seeker_Reupgrades',
+  ifnull(forecast.Plan_Total_Spend,0) as 'Plan_Total_Spend',
+  ifnull(forecast.Plan_Seeker_Spend,0) as 'Plan_Seeker_Spend',
+  ifnull(forecast.Plan_Provider_Spend,0) as 'Plan_Provider_Spend',
+  ifnull(forecast.Plan_Total_Bookings,0) as 'Plan_Total_Bookings',
+  ifnull(forecast.Plan_Seeker_Total_Bookings,0) as 'Plan_Seeker_Total_Bookings',
+  ifnull(forecast.Plan_Provider_Total_Bookings,0) as 'Plan_Provider_Total_Bookings',
+  ifnull(forecast.Plan_Seeker_Initial_Bookings,0) as 'Plan_Seeker_Initial_Bookings',
+  ifnull(forecast.Plan_Seeker_Initial_Day1_Bookings,0) as 'Plan_Seeker_Initial_Day1_Bookings',
+  ifnull(forecast.Plan_Seeker_Initial_NthDay_Bookings,0) as 'Plan_Seeker_Initial_NthDay_Bookings',
+  ifnull(forecast.Plan_Seeker_Initial_Reupgrade_Bookings,0) as 'Plan_Seeker_Initial_Reupgrade_Bookings', 
+  ifnull(forecast.Plan_Provider_Initial_Bookings,0) as 'Plan_Provider_Initial_Bookings',
+  ifnull(forecast.Plan_Provider_Initial_Day1_Bookings,0) as 'Plan_Provider_Initial_Day1_Bookings',
+  ifnull(forecast.Plan_Provider_Initial_NthDay_Bookings,0) as 'Plan_Provider_Initial_NthDay_Bookings',
+  ifnull(forecast.Plan_Provider_Initial_Reupgrade_Bookings,0) as 'Plan_Provider_Initial_Reupgrade_Bookings',
+  ifnull(forecast.Plan_Seeker_Recurring_Bookings,0) as 'Plan_Seeker_Recurring_Bookings',
+  ifnull(forecast.Plan_Basic_Providers,0) as 'Plan_Basic_Providers',
+  ifnull(forecast.Plan_Provider_AllPremiums,0) as 'Plan_Provider_AllPremiums',
+  ifnull(forecast.Plan_New_Provider_Premiums,0) as 'Plan_New_Provider_Premiums',
+  ifnull(forecast.Plan_Provider_Reupgrades,0) as 'Plan_Provider_Reupgrades'
+  --ifnull(forecast.Plan_Seeker_First_Period_Renewal_Rate,0) as 'Plan_Seeker_First_Period_Renewal_Rate',
+  --ifnull(forecast.Plan_Seeker_Blended_Renewal_Rate,0) as 'Plan_Seeker_Blended_Renewal_Rate',
+  --ifnull(forecast.Plan_Seeker_Discount_Pct_NewBookings,0) as 'Plan_Seeker_Discount_Pct_NewBookings',
+  --ifnull(forecast.Plan_Seeker_EOP_Premiums,0) as 'Plan_Seeker_EOP_Premiums'
+from (
+--1. Base dates
+  select distinct
+    dty.fiscal_year as 'Year_Current',
+    dty.fiscal_month as 'Month_Current',
+    dty.fiscal_week_of_year as 'Week_of_year_Current',
+    dty.week_start_date as 'week_start_date_Current',
+    dty.date as 'Date_Current',
+    ddd.fiscal_year as 'fiscal_year',
+    ddd.Fiscal_quarter as 'Fiscal_quarter',
+    ddd.Fiscal_month as 'Fiscal_month',
+	  ddd.week_start_date as 'week_start_date',
+	  ddd.date as 'date',
+	  current_date() as 'run_date',
+	  (select ddd.week_start_date from reporting.DW_D_DATE ddd where ddd.date = current_date) as 'run_date_week',
+    (select ddd.month_start_date from reporting.DW_D_DATE ddd where ddd.date = current_date) as 'run_date_month',
+	  countrycode.countrycode,
+	  to_char(ddd.fiscal_year) as 'Year',
+	  'Actual' as 'DataType',
+	  TIMESTAMPADD (day,-7,today.week_start_date) as 'LastWeek',
+	  case when (ddd.fiscal_year) = YEAR(NOW()-1) or (ddd.fiscal_year) = YEAR(NOW()-1)-1 or (ddd.fiscal_year) = YEAR(NOW()-1)-2 THEN 1 else 0 end as 'Current_Years_Graph',
+	  case when (ddd.fiscal_year) = YEAR(NOW()-1) or (ddd.fiscal_year) = YEAR(NOW()-1)-1 THEN 1 else 0 end as 'Current_Years_Graph_Limited',
+    cur.Yesterday as 'Yesterday',
+    cur.IsLast7Days as 'IsLast7Days',
+    cur.WeekToDate as 'WeekToDate',
+    cur.MonthToDate as 'MonthToDate',
+    cur.YearToDate as 'YearToDate',
+    cur.YearToWeekStart as 'YearToWeekStart',
+    cur.LastWeekWTD as 'LastWeekWTD',
+    cur.IsCurrentMonth as 'IsCurrentMonth',
+    cur.Relative_Year as 'Relative_Year'
+  from reporting.DW_D_DATE ddd
+    join reporting.DW_D_DATE today on today.date = current_date()
+    left join analytics.DW_D_DATE_CURRENT cur on ddd.date = cur.date
+    join reporting.DW_D_DATE dty on dty.date = cur.Current_Date_SameDay
+  cross join (
+    select distinct -- 17 rows
+      m.countrycode as 'countrycode'
+      from intl.hive_member m
+      where date(dateProfileComplete) = '2021-02-16'
+    ) countrycode
+  where
+    year(ddd.date) >= year(now())-2
+    and year(ddd.date) < year(now())+1
+) base_dates
+--2. Member Data
+left join (
+  select
+    date,
+    countrycode,
+    sum(case when member_type = 'Seeker' then basics else 0 end) as 'Basic_Seekers',
+    sum(case when member_type = 'Seeker' and channel in ('SEM','Facebook','Online/Aff/Disp') then basics else 0 end) as 'Paid_Basic_Seekers',
+    sum(case when member_type = 'Seeker' and channel in ('SEO','Direct','Other','Email') then basics else 0 end) as 'Organic_Basic_Seekers',
+    sum(case when member_type = 'Seeker' then day1_premiums else 0 end) as 'Seeker_Day1s',
+    sum(case when member_type = 'Seeker' then nth_day_premiums else 0 end) as 'Seeker_NthDays',
+    sum(case when member_type = 'Seeker' then reupgrades else 0 end) as 'Seeker_Reupgrades',
+    sum(case when member_type = 'Seeker' then day1_premiums+nth_day_premiums else 0 end) as 'New_Seeker_Premiums',
+    sum(case when member_type = 'Seeker' then day1_premiums+nth_day_premiums+reupgrades else 0 end) as 'Total_Seeker_Premiums',   
+    sum(case when member_type = 'Seeker' and subscription_length = 1 then day1_premiums+nth_day_premiums+reupgrades else 0 end) as 'One_Month_Seeker_Premiums',
+    sum(case when member_type = 'Seeker' and subscription_length = 3 then day1_premiums+nth_day_premiums+reupgrades else 0 end) as 'Three_Month_Seeker_Premiums',
+    sum(case when member_type = 'Seeker' and subscription_length = 12 then day1_premiums+nth_day_premiums+reupgrades else 0 end) as 'Twelve_Month_Seeker_Premiums',
+    sum(case when member_type = 'Seeker' and channel = 'SEO' then day1_premiums+nth_day_premiums else 0 end) as 'SEO_NewSeeker_Premiums',
+    sum(case when member_type = 'Seeker' and channel = 'SEM' then day1_premiums+nth_day_premiums else 0 end) as 'SEM_NewSeeker_Premiums',
+    sum(case when member_type = 'Seeker' and channel = 'Facebook' then day1_premiums+nth_day_premiums else 0 end) as 'FB_NewSeeker_Premiums',
+    sum(case when member_type = 'Seeker' and channel = 'Direct' then day1_premiums+nth_day_premiums else 0 end) as 'Direct_NewSeeker_Premiums',
+    sum(case when member_type = 'Seeker' and channel in ('SEM','Facebook','Online/Aff/Disp') then day1_premiums+nth_day_premiums+reupgrades else 0 end) as 'Paid_Total_Seeker_Premiums',
+    sum(case when member_type = 'Seeker' and channel in ('SEO','Direct','Other','Email') then day1_premiums+nth_day_premiums+reupgrades else 0 end) as 'Organic_Total_Seeker_Premiums',
+    sum(case when member_type = 'Seeker' and channel in ('SEM','Facebook','Online/Aff/Disp') then day1_premiums+nth_day_premiums else 0 end) as 'Paid_NewSeeker_Premiums',
+    sum(case when member_type = 'Seeker' and channel in ('SEO','Direct','Other','Email') then day1_premiums+nth_day_premiums else 0 end) as 'Organic_NewSeeker_Premiums',
+    sum(case when member_type = 'Provider' then basics else 0 end) as 'Basic_Providers',
+    sum(case when member_type = 'Provider' then day1_premiums else 0 end) as 'Provider_Day1s',
+    sum(case when member_type = 'Provider' then nth_day_premiums else 0 end) as 'Provider_NthDays',
+    sum(case when member_type = 'Provider' then reupgrades else 0 end) as 'Provider_Reupgrades',
+    sum(case when member_type = 'Provider' then day1_premiums+nth_day_premiums else 0 end) as 'New_Provider_Premiums',
+    sum(case when member_type = 'Provider' then day1_premiums+nth_day_premiums+reupgrades else 0 end) as 'Total_Provider_Premiums'
+  from analytics_prod.INTL_Daily_Subscriptions
+  group by 1,2
+) md on base_dates.date = md.date and base_dates.countrycode = md.countrycode
+--3. Visit Data
+left join (
+  select
+    date,
+    countrycode,
+    sum(case when returning_member_visit = 'Non Member Visit' then Visitors end) as 'Visitors',
+    sum(case when returning_member_visit = 'Non Member Visit' then VHP_Visits end) as 'VHP_Visits',
+    sum(case when returning_member_visit = 'Non Member Visit' then VHP_Bounced end) as 'VHP_Bounced'
+  from analytics_prod.INTL_DAILY_VISITS
+  group by 1,2
+) vd on vd.date = base_dates.date and vd.countrycode = base_dates.countrycode
+--4. Bookings
+left join (
+  select
+    date,
+    countrycode,
+    sum(case when transaction_type = 'Booking' then amount_USD else 0 end) as 'Total_Bookings',
+    sum(case when transaction_type = 'Booking' and Renewal = 'First' then amount_USD else 0 end) as 'Initial_Bookings',
+    sum(case when transaction_type = 'Booking' and Renewal = 'Renewal' then amount_USD else 0 end) as 'Renewal_Bookings',
+    sum(case when transaction_type = 'Booking' and member_type = 'Seeker' then amount_USD else 0 end) as 'Seeker_Total_Bookings',
+    sum(case when transaction_type = 'Booking' and member_type = 'Seeker' and Renewal = 'First' then amount_USD else 0 end) as 'Seeker_Initial_Bookings',
+    sum(case when transaction_type = 'Booking' and member_type = 'Seeker' and Renewal = 'First' and Booking_Type = 'Initial_Booking_New' then amount_USD else 0 end) as 'Seeker_New_Initial_Bookings',
+    sum(case when transaction_type = 'Booking' and member_type = 'Seeker' and Renewal = 'First' and Booking_Type = 'Initial_Booking_Reup' then amount_USD else 0 end) as 'Seeker_Reup_Initial_Bookings',
+    sum(case when transaction_type = 'Booking' and member_type = 'Seeker' and Renewal = 'Renewal' then amount_USD else 0 end) as 'Seeker_Recurring_Bookings',
+    sum(case when transaction_type = 'Booking' then discounts_USD else 0 end) as 'Total_Discounts',
+    sum(case when transaction_type = 'Booking' and member_type = 'Seeker' then discounts_USD else 0 end) as 'Seeker_Discounts',
+    sum(case when transaction_type = 'Booking' and member_type = 'Seeker' and Renewal = 'First' then discounts_USD else 0 end) as 'Seeker_Initial_Discounts',
+    sum(case when transaction_type = 'Booking' and member_type = 'Seeker' and Renewal = 'Renewal' then discounts_USD else 0 end) as 'Seeker_Recurring_Discounts',
+    sum(case when transaction_type = 'Booking' and member_type = 'Provider' then amount_USD else 0 end) as 'Provider_Total_Bookings',
+    sum(case when transaction_type = 'Booking' and member_type = 'Provider' and Renewal = 'First' then amount_USD else 0 end) as 'Provider_Initial_Bookings',
+    sum(case when transaction_type = 'Booking' and member_type = 'Provider' and Renewal = 'First' and Booking_Type = 'Initial_Booking_New' then amount_USD else 0 end) as 'Provider_New_Initial_Bookings',
+    sum(case when transaction_type = 'Booking' and member_type = 'Provider' and Renewal = 'First' and Booking_Type = 'Initial_Booking_Reup' then amount_USD else 0 end) as 'Provider_Reup_Initial_Bookings',
+    sum(case when transaction_type = 'Booking' and member_type = 'Provider' and Renewal = 'Renewal' then amount_USD else 0 end) as 'Provider_Recurring_Bookings',
+    sum(case when transaction_type = 'Booking' and member_type = 'Provider' then discounts_USD else 0 end) as 'Provider_Discounts',
+    sum(case when transaction_type = 'Booking' and member_type = 'Provider' and Renewal = 'First' then discounts_USD else 0 end) as 'Provider_Initial_Discounts',
+    sum(case when transaction_type = 'Booking' and member_type = 'Provider' and Renewal = 'Renewal' then discounts_USD else 0 end) as 'Provider_Recurring_Discounts',
+    sum(Orders) as 'Orders',
+    sum(Discounted_Orders) as 'Dicounted_Orders'
+  from analytics_prod.intl_daily_bookings --analytics_prod.INTL_DAILY_BOOKINGS
+  group by 1,2
+) bookings on base_dates.date = bookings.date and base_dates.countrycode = bookings.countrycode
+--5. Renewals
+left join (
+  select
+    date,
+    countrycode,
+    sum(case when member_type = 'Seeker' then renewals else 0 end) as 'Seeker_Renewals',
+    sum(case when member_type = 'Seeker' then potential_renewals else 0 end) as 'Seeker_Potential_Renewals',
+    sum(case when member_type = 'Seeker' and renewal_period = 'First Period Renewal' then renewals else 0 end) as 'Seeker_First_Period_Renewals',
+    sum(case when member_type = 'Seeker' and renewal_period = 'First Period Renewal' then potential_renewals else 0 end) as 'Seeker_First_Period_Potential_Renewals',
+    sum(case when member_type = 'Seeker' and subscription_length = 1 then renewals else 0 end) as 'Seeker_1_Month_Renewals',
+    sum(case when member_type = 'Seeker' and subscription_length = 1 then potential_renewals else 0 end) as 'Seeker_1_Month_Potential_Renewals',
+    sum(case when member_type = 'Seeker' and subscription_length = 3 then renewals else 0 end) as 'Seeker_3_Month_Renewals',
+    sum(case when member_type = 'Seeker' and subscription_length = 3 then potential_renewals else 0 end) as 'Seeker_3_Month_Potential_Renewals',
+    sum(case when member_type = 'Seeker' and subscription_length = 12 then renewals else 0 end) as 'Seeker_12_Month_Renewals',
+    sum(case when member_type = 'Seeker' and subscription_length = 12 then potential_renewals else 0 end) as 'Seeker_12_Month_Potential_Renewals', 
+    sum(case when member_type = 'Provider' then renewals else 0 end) as 'Provider_Renewals',
+    sum(case when member_type = 'Provider' then potential_renewals else 0 end) as 'Provider_Potential_Renewals',
+    sum(case when member_type = 'Provider' and renewal_period = 'First Period Renewal' then renewals else 0 end) as 'Provider_First_Period_Renewals',
+    sum(case when member_type = 'Provider' and renewal_period = 'First Period Renewal' then potential_renewals else 0 end) as 'Provider_First_Period_Potential_Renewals',
+    sum(case when member_type = 'Provider' and subscription_length = 1 then renewals else 0 end) as 'Provider_1_Month_Renewals',
+    sum(case when member_type = 'Provider' and subscription_length = 1 then potential_renewals else 0 end) as 'Provider_1_Month_Potential_Renewals',
+    sum(case when member_type = 'Provider' and subscription_length = 3 then renewals else 0 end) as 'Provider_3_Month_Renewals',
+    sum(case when member_type = 'Provider' and subscription_length = 3 then potential_renewals else 0 end) as 'Provider_3_Month_Potential_Renewals',
+    sum(case when member_type = 'Provider' and subscription_length = 6 then renewals else 0 end) as 'Provider_6_Month_Renewals',
+    sum(case when member_type = 'Provider' and subscription_length = 6 then potential_renewals else 0 end) as 'Provider_6_Month_Potential_Renewals'
+  from analytics_prod.INTL_DAILY_RENEWALS_DOWNGRADES
+  group by 1,2
+) renewal on renewal.date = base_dates.date and renewal.countrycode = base_dates.countrycode 
+--6. EOP
+left join (
+  select
+    ddd.date as 'date',
+    m.countrycode,
+    count(distinct case when m.role = 'seeker' then s.memberId end) as 'EOP_Premium_Seekers',
+    count(distinct case when m.role = 'provider' then s.memberId end) as 'EOP_Premium_Providers'
+  from intl.hive_subscription_plan s 
+    join intl.hive_member m on s.memberID = m.memberId and m.countrycode = s.countrycode 
+    join (select distinct date, week_start_date, month_start_date, fiscal_month_end_date, year from reporting.dw_d_date ddd) ddd 
+       on date(s.subscriptionDateCreated) <= ddd.date and date(s.nextPaymentDate) > ddd.date
+  where lower(s.type) in ('day1upgrade','daynupgrade', 'reupgrade')
+    and year(ddd.date) >= year(now())-2
+    and s.subscriptionClass <> 'FreeSubscriptionPlan'
+    and ddd.date < current_date
+  group by 1,2
+) eop on base_dates.date = eop.date and base_dates.countrycode = eop.countrycode
+--7. Spend
+left join (
+  select
+    date,
+    countrycode,
+    ifnull(sum(Total_SEM_Spend+Total_FB_Spend+Total_OO_Spend+TV_Spend),0) as 'Total_Spend',
+    ifnull(sum(Seeker_SEM_Spend+Seeker_FB_Spend+Seeker_OO_Spend+TV_Spend),0) as 'Seeker_Spend',
+    ifnull(sum(Seeker_SEM_Spend+Seeker_FB_Spend),0) as 'Seeker_SEM_FB_Spend',
+    ifnull(sum(Provider_SEM_Spend+Provider_FB_Spend+Provider_OO_Spend),0) as 'Provider_Spend',
+    ifnull(sum(Provider_SEM_Spend+Provider_FB_Spend),0) as 'Provider_SEM_FB_Spend'
+  from analytics.vw_INTL_Spend
+  group by 1,2
+) spend on base_dates.date = spend.date and base_dates.countrycode = spend.countrycode
+--8. Forecast Daily Snap + Exec
+left join (
+  select
+    date,
+    countrycode,
+    plan_type,
+    ifnull(sum(Plan_Visitors),0) as 'Plan_Visitors',
+    ifnull(sum(Plan_Basic_Seeker),0) as 'Plan_Basic_Seeker',
+    ifnull(sum(Plan_SEM_Basic_Seeker+Plan_Online_Basic_Seeker),0) as 'Plan_Paid_Basic_Seekers',
+    ifnull(sum(Plan_SEO_Basic_Seeker+Plan_Direct_Basic_Seeker),0) as 'Plan_Organic_Basic_Seekers',
+    ifnull(sum(Plan_Seeker_AllPremiums),0) as 'Plan_Seeker_AllPremiums',
+    ifnull(sum(Plan_New_Seeker_Premiums),0) as 'Plan_New_Seeker_Premiums',   
+    ifnull(sum(Plan_New_Seeker_SEM_Premiums+Plan_New_Seeker_TV_Premiums+Plan_New_Seeker_OtherOnline_Premiums+Plan_New_Seeker_FB_Premiums+Plan_Seeker_SEM_Reupgrades+Plan_Seeker_Online_Reupgrades),0) as 'Plan_Paid_Total_Seeker_Premiums',
+    ifnull(sum(Plan_New_Seeker_SEO_Premiums+Plan_New_Seeker_Direct_Premiums+Plan_Seeker_Direct_Reupgrades+Plan_Seeker_SEO_Reupgrades),0) as 'Plan_Organic_Total_Seeker_Premiums',
+    ifnull(sum(Plan_New_Seeker_SEM_Premiums+Plan_New_Seeker_TV_Premiums+Plan_New_Seeker_OtherOnline_Premiums+Plan_New_Seeker_FB_Premiums),0) as 'Plan_Paid_New_Seeker_Premiums',
+    ifnull(sum(Plan_New_Seeker_SEO_Premiums+Plan_New_Seeker_Direct_Premiums),0) as 'Plan_Organic_New_Seeker_Premiums',
+    ifnull(sum(Plan_New_Seeker_SEM_Premiums),0) as 'Plan_New_Seeker_SEM_Premiums',
+    ifnull(sum(Plan_New_Seeker_SEO_Premiums),0) as 'Plan_New_Seeker_SEO_Premiums',
+    ifnull(sum(Plan_New_Seeker_Direct_Premiums),0) as 'Plan_New_Seeker_Direct_Premiums',
+    ifnull(sum(Plan_New_Seeker_FB_Premiums),0) as 'Plan_New_Seeker_FB_Premiums',
+    ifnull(sum(Plan_Seeker_Reupgrades),0) as 'Plan_Seeker_Reupgrades',
+    ifnull(sum(Plan_Total_Spend),0) as 'Plan_Total_Spend',
+    ifnull(sum(Plan_Seeker_Spend),0) as 'Plan_Seeker_Spend',
+    ifnull(sum(Plan_Provider_Spend),0) as 'Plan_Provider_Spend',
+    ifnull(sum(Plan_Total_Bookings),0) as 'Plan_Total_Bookings',
+    ifnull(sum(Plan_Seeker_Total_Bookings),0) as 'Plan_Seeker_Total_Bookings',
+    ifnull(sum(Plan_Seeker_Initial_Bookings+Plan_Provider_Initial_Bookings),0) as 'Plan_Initial_Bookings',
+    ifnull(sum(Plan_Seeker_Recurring_Bookings+Plan_Provider_Recurring_Bookings),0) as 'Plan_Renewal_Bookings',
+    ifnull(sum(Plan_Provider_Total_Bookings),0) as 'Plan_Provider_Total_Bookings',
+    ifnull(sum(Plan_Seeker_Initial_Bookings),0) as 'Plan_Seeker_Initial_Bookings',
+    ifnull(sum(Plan_Seeker_Initial_Day1_Bookings),0) as 'Plan_Seeker_Initial_Day1_Bookings',
+    ifnull(sum(Plan_Seeker_Initial_NthDay_Bookings),0) as 'Plan_Seeker_Initial_NthDay_Bookings',
+    ifnull(sum(Plan_Seeker_Initial_Reupgrade_Bookings),0) as 'Plan_Seeker_Initial_Reupgrade_Bookings',
+    ifnull(sum(Plan_Provider_Initial_Bookings),0) as 'Plan_Provider_Initial_Bookings',
+    ifnull(sum(Plan_Provider_Initial_Day1_Bookings),0) as 'Plan_Provider_Initial_Day1_Bookings',
+    ifnull(sum(Plan_Provider_Initial_NthDay_Bookings),0) as 'Plan_Provider_Initial_NthDay_Bookings',
+    ifnull(sum(Plan_Provider_Initial_Reupgrade_Bookings),0) as 'Plan_Provider_Initial_Reupgrade_Bookings',
+    ifnull(sum(Plan_Seeker_Recurring_Bookings),0) as 'Plan_Seeker_Recurring_Bookings',
+    ifnull(sum(Plan_Basic_Provider),0) as 'Plan_Basic_Providers',
+    ifnull(sum(Plan_Provider_AllPremiums),0) as 'Plan_Provider_AllPremiums',
+    ifnull(sum(Plan_New_Provider_Premiums),0) as 'Plan_New_Provider_Premiums',
+    ifnull(sum(Plan_Provider_Reupgrades),0) as 'Plan_Provider_Reupgrades'
+    --ifnull(sum(f.Plan_Seeker_First_Period_Renewal_Rate),0) as 'Plan_Seeker_First_Period_Renewal_Rate',
+    --ifnull(sum(f.Plan_Seeker_Blended_Renewal_Rate),0) as 'Plan_Seeker_Blended_Renewal_Rate',
+    --ifnull(sum(f.Plan_Seeker_Discount_Pct_NewBookings),0) as 'Plan_Seeker_Discount_Pct_NewBookings',
+    --ifnull(sum(f.Plan_Seeker_EOP_Premiums),0) as 'Plan_Seeker_EOP_Premiums'
+  from analytics.intl_daily_snapshot_forecast
+  group by 1,2,3
+) forecast on base_dates.date = forecast.date and base_dates.countrycode = forecast.countrycode
