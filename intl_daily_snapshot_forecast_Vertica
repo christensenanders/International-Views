@@ -1,0 +1,81 @@
+-- Old school Vertica CSV upload method
+
+grant all on table analytics.intl_daily_snapshot_forecast to reporting_ro, analytics_team;
+
+select * from analytics.intl_daily_snapshot_forecast;
+
+drop table if exists analytics.intl_daily_snapshot_forecast;
+--create or replace view analytics.intl_daily_snapshot_forecast as
+create table analytics.intl_daily_snapshot_forecast
+(
+date date,
+plan_type varchar(50),
+countrycode varchar(50),
+Plan_Visitors float,
+Plan_SEM_Visitors float,
+Plan_Online_Visitors float,
+Plan_SEO_Visitors float,
+Plan_Direct_Visitors float,
+Plan_Basic_Seeker float,
+Plan_SEM_Basic_Seeker float,
+Plan_Online_Basic_Seeker float,
+Plan_SEO_Basic_Seeker float,
+Plan_Direct_Basic_Seeker float,
+Plan_Seeker_AllPremiums float,
+Plan_New_Seeker_Premiums float,
+Plan_New_Seeker_SEM_Premiums float,
+Plan_New_Seeker_SEO_Premiums float,
+Plan_New_Seeker_Direct_Premiums float,
+Plan_New_Seeker_TV_Premiums float,
+Plan_New_Seeker_OtherOnline_Premiums float,
+Plan_New_Seeker_FB_Premiums float,
+Plan_Seeker_Day1s float,
+Plan_Seeker_SEM_Day1s float,
+Plan_Seeker_Online_Day1s float,
+Plan_Seeker_Direct_Day1s float,
+Plan_Seeker_SEO_Day1s float,
+Plan_Seeker_NthDays float,
+Plan_Seeker_SEM_NthDays float,
+Plan_Seeker_Online_NthDays float,
+Plan_Seeker_Direct_NthDays float,
+Plan_Seeker_SEO_NthDays float,
+Plan_Seeker_Reupgrades float,
+Plan_Seeker_SEM_Reupgrades float,
+Plan_Seeker_Online_Reupgrades float,
+Plan_Seeker_Direct_Reupgrades float,
+Plan_Seeker_SEO_Reupgrades float,
+Plan_Seeker_Spend float,
+Plan_SEM_Seeker_Spend float,
+Plan_Seeker_Total_Bookings float,
+Plan_Seeker_Initial_Bookings float,
+Plan_Seeker_Initial_Day1_Bookings float,
+Plan_Seeker_Initial_NthDay_Bookings float,
+Plan_Seeker_Initial_Reupgrade_Bookings float,
+Plan_Seeker_Recurring_Bookings float,
+Plan_Basic_Provider float,
+Plan_Provider_AllPremiums float,
+Plan_New_Provider_Premiums float,
+Plan_New_Provider_SEM_Premiums float,
+Plan_New_Provider_SEO_Premiums float,
+Plan_New_Provider_Direct_Premiums float,
+Plan_New_Provider_FB_Premiums float,
+Plan_Provider_Reupgrades float,
+Plan_SEM_Provider_Spend float,
+Plan_Provider_Total_Bookings float,
+Plan_Provider_Initial_Bookings float,
+Plan_Provider_Initial_Day1_Bookings float,
+Plan_Provider_Initial_NthDay_Bookings float,
+Plan_Provider_Initial_Reupgrade_Bookings float,
+Plan_Provider_Recurring_Bookings float,
+Plan_Provider_Spend float,
+Plan_Total_Spend float,
+Plan_Total_Bookings float
+)
+;
+-- 1. Open command prompt and run this snippet
+cd C:\Program Files (x86)\Vertica Systems\VSQL32
+
+-- 2. Adapt and run this. You mave have to place the CSV in your own OneDrive folder for it to work
+vsql -t -h vertica.gold.analytics.carezen.net -d CAREZEN  -U "anders.christensen" -w "/*PASSWORD*/" -c "COPY analytics.intl_daily_snapshot_forecast FROM LOCAL 'C:\Users\anders.christensen\OneDrive - Care.com, Inc\INTL ADI & FP&A\INTL Forecast Process\INTL_Snapshot_Forecast_07.04.2024_Command_Prompt.csv' abort on error NULL as '\N' delimiter ',' AUTO"
+-- /*PASSWORD*/
+-- 2023 one-off table uploaded: analytics.intl_daily_snapshot_forecast_2023_last_version
