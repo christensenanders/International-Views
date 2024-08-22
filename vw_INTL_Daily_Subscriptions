@@ -1,0 +1,123 @@
+select * from analytics_prod.INTL_Daily_Subscriptions limit 100;
+
+drop view if exists analytics.vw_INTL_Daily_Subscriptions;
+
+grant all on analytics.vw_INTL_Daily_Subscriptions to reporting_ro, analytics_team;
+
+create view analytics.vw_INTL_Daily_Subscriptions as
+/*Premium data*/
+select
+  m.countrycode,
+  date(sp.subscriptionDateCreated) as date,
+  d.week_start_date,
+  d.month_start_date,
+  d.year,
+  dc.current_date_sameday,
+  initcap(m.role) as member_type,
+  lower(m.audience) as 'audience',
+  m.town as metro,
+  m.ClosedForFraud,
+  m.memberid,
+  sp.subscriptionId,
+  sp.pricePlanDurationInMonths as subscription_length,
+  case 
+    when lower(service) in ('cc','childcare','') then 'CC'
+    when lower(service) in ('hk','homecare','ho','housekeeping') then 'HK'
+    when lower(service) in ('pc','petcare') then 'PC'
+    when lower(service) in ('sc','seniorcare') then 'SC'
+    when lower(service) in ('tt','tutoring') then 'TT'
+    when lower(service) in ('sn','specialneeds') then 'SN'
+    when lower(service) in ('ap','aupair') then 'AP'
+    when lower(service) in ('br','all','general',' general','genera') then 'BR'
+    else 'CC'
+    end as 'service',
+  case 
+    when m.vertical = 'homeCare' then 'Housekeeping' 
+    when (m.vertical IS NULL or m.vertical = '') then 'Childcare' 
+    else initcap(lower(m.vertical))
+    end as vertical,
+  case 
+    when m.device = 'smartphone' or m.device = '' or m.device is null then 'Mobile' 
+    else initcap(lower(m.device))
+    end as sign_up_device,
+  m.channel as 'channel',
+  case when m.channel in ('SEM','Facebook','Online/Aff/Disp') then 'Paid' else 'Organic' end as 'Marketing_Type',
+  m.site,
+  -- case when cc.payment_type = 'CREDIT_CARD' then 'CreditCard' when cc.payment_type = 'iDEAL' then 'iDEAL' else initcap(lower(cc.payment_type)) end as 'Payment_Type',
+  -- case when cc.type is null then 'Not_CreditCard' else cc.type end as 'Card_Type',
+  sum(0) as basics,
+  count(distinct case when date(sp.subscriptionDateCreated) = date(dateProfileComplete) then sp.subscriptionId end) as Day1_Premiums,
+  count(distinct case when date(m.dateFirstPremiumSignup) = date(sp.subscriptionDateCreated) and date(sp.subscriptionDateCreated) != date(dateProfileComplete) then sp.subscriptionId end) as Nth_Day_Premiums,
+  count(distinct case when date(m.dateFirstPremiumSignup) = date(sp.subscriptionDateCreated) and datediff('day',date(dateProfileComplete), date(sp.subscriptionDateCreated)) < 7 then sp.subscriptionId end) as 'Day_7s',
+  count(distinct case when date(m.dateFirstPremiumSignup) = date(sp.subscriptionDateCreated) and datediff('day',date(dateProfileComplete), date(sp.subscriptionDateCreated)) >= 1 and datediff('day',date(dateProfileComplete), date(sp.subscriptionDateCreated)) <= 28 then sp.subscriptionId end) as 'Nth_Day_Premiums_Day_2to28',
+  count(distinct case when date(m.dateFirstPremiumSignup) = date(sp.subscriptionDateCreated) and datediff('day',date(dateProfileComplete), date(sp.subscriptionDateCreated)) <= 30 then sp.subscriptionId end) as 'Day_30s',
+  count(distinct case when date(m.dateFirstPremiumSignup) != date(sp.subscriptionDateCreated) then sp.subscriptionId end) as Reupgrades,
+  count(distinct case when date(sp.subscriptionDateCreated) = date(dateProfileComplete) and sp.promotioncode is not null then sp.subscriptionId end) as Promo_DayOnePremiums,
+  count(distinct case when date(m.dateFirstPremiumSignup) = date(sp.subscriptionDateCreated) and date(sp.subscriptionDateCreated) != date(dateProfileComplete) and sp.promotioncode is not null then sp.subscriptionId end) as Promo_NthDayPremiums,
+  count(distinct case when date(m.dateFirstPremiumSignup) != date(sp.subscriptionDateCreated) and sp.promotioncode is not null then sp.subscriptionId end) as Promo_ReupgradePremiums
+from intl.transaction t
+  join intl.hive_subscription_plan sp on sp.subscriptionId = t.subscription_plan_id and sp.countrycode = t.country_code
+  join intl.hive_member m on t.member_id = m.memberid and t.country_code = m.countrycode and m.IsInternalAccount = 'false' and m.role is not null
+  -- join intl.credit_card cc on cc.id = t.credit_card_id and t.member_id = cc.member_id and t.country_code = cc.country_code
+  join reporting.dw_d_date d on d.date = date(sp.subscriptionDateCreated)
+  left join analytics.dw_d_date_current dc on dc.date = date(sp.subscriptionDateCreated)
+where t.type in ('PriorAuthCapture','AuthAndCapture')
+  and t.status = 'SUCCESS'
+  and t.amount > 0
+  and year(sp.subscriptionDateCreated) >= 2014
+  and date(sp.subscriptionDateCreated) <> current_date()
+group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19--,20,21
+
+UNION
+
+/*Basic data*/
+select
+    m.countrycode,
+    date(m.dateProfileComplete) as date,
+    d.week_start_date,
+    d.month_start_date,
+    d.year,
+    dc.current_date_sameday,
+    initcap(m.role) as member_type,
+    lower(m.audience) as 'audience',
+    m.town as metro,
+    m.ClosedForFraud,
+    m.memberid,
+    0 as subscriptionId,
+    0 as subscription_length,
+    case 
+       when lower(service) in ('cc','childcare','') then 'CC'
+       when lower(service) in ('hk','homecare','ho','housekeeping') then 'HK'
+       when lower(service) in ('pc','petcare') then 'PC'
+       when lower(service) in ('sc','seniorcare') then 'SC'
+       when lower(service) in ('tt','tutoring') then 'TT'
+       when lower(service) in ('sn','specialneeds') then 'SN'
+       when lower(service) in ('ap','aupair') then 'AP'
+       when lower(service) in ('br','all','general',' general','genera') then 'BR'
+       else 'CC'
+       end as 'service',
+    case 
+      when m.vertical = 'homeCare' then 'Housekeeping' 
+      when (m.vertical IS NULL or m.vertical = '') then 'Childcare' 
+      else initcap(lower(m.vertical))
+      end as vertical,
+    case 
+      when m.device = 'smartphone' or m.device = '' or m.device is null then 'Mobile' 
+      else initcap(lower(m.device))
+      end as sign_up_device,
+    m.channel as 'channel',
+    case when m.channel in ('SEM','Facebook','Online/Aff/Disp') then 'Paid' else 'Organic' end as 'Marketing_Type',
+    m.site,
+    -- '' as 'Payment_Type',
+    -- '' as 'Card_Type',
+    count(distinct memberid) as 'basics',
+    0,0,0,0,0,0,0,0,0
+  from intl.hive_member m
+    join reporting.dw_d_date d on d.date = date(m.dateProfileComplete)
+    left join analytics.dw_d_date_current dc on dc.date = date(m.dateProfileComplete)
+  where
+    year(m.dateProfileComplete) >= 2014
+    and date(m.dateProfileComplete) <> current_date()
+    and m.role is not null
+    and m.IsInternalAccount = 'false'
+  group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19--,20,21
