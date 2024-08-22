@@ -1,0 +1,63 @@
+/* Notes on this view:
+  1. This table is the source of truth for International visit data and is used as a data source in key reporting.   
+  2. A view to table job populates analytics_prod.INTL_Daily_Visits with this view once a day once the underlying tables are updated.
+  3. As the data load is quite heavy it's an incremental refresh of the last 7 days only. All rows prior to that are hard coded.
+    3a. In case you need to add additional columns, DST will assist in overwriting the hard coded data by dropping the table and ingesting one year at a time until done.
+*/
+select distinct year(date) from analytics_prod.INTL_Daily_Visits limit 100;
+
+drop view if exists analytics.vw_INTL_Daily_Visits;
+
+grant all on analytics.vw_INTL_Daily_Visits to reporting_ro, analytics_team;
+
+create view analytics.vw_INTL_Daily_Visits as
+select  
+  v.countrycode,
+  ddd.date as date,
+  ddd.week_start_date,
+  ddd.month_start_date,
+  dc.current_date_sameday,
+  NULL as vertical,
+  case 
+    when v.device = 'smartphone' or v.device = '' or v.device is null then 'Mobile' 
+    else initcap(lower(v.device)) 
+  end as 'device',
+  case
+    when (v.memberid is null or v.signup=true) then 'Non Member Visit'
+    else 'Member Visit' 
+  end as Returning_Member_Visit,
+  case 
+    when lower(v.rxsite) like '%google%' then 'GOOGLE'
+    when lower(v.rxsite) like '%yahoo%' then 'YAHOO'
+    when lower(v.rxsite) like '%bing%' then 'BING'
+    when lower(v.rxsite) like '%msn%' then 'MSN'
+    else 'OTHER' 
+  end as Source,
+  -- case when lower(rxaudience) not in ('provider','seeker','general','adhoc') then 'Other' else initcap(lower(rxaudience)) end as 'rxaudience',
+  case
+    when lower(v.rxcampaign)='seo' then 'SEO'
+    when (lower(v.rxcampaign)='seo' and rxcampaignname='JobPage' and v.rxsite like 'www.google.%' and v.rxcreativeversion like '%google_jobs_apply%') then 'Google Jobs'  
+    when (lower(v.rxsite) like 'careus%' or lower(v.rxcampaign)='direct') then 'Direct'
+    when (lower(v.rxcampaign)='online' and lower(v.rxsite)='facebook') then 'Facebook'
+    when (lower(v.rxcampaign)='sem' and (lower(v.rxservice) in ('br','all','general') or lower(v.rxcampaignname) like '%_br_%' or lower(v.rxcampaignname) like '%brand%')) then 'SEM-Br'
+    when (lower(v.rxcampaign)='sem' and (lower(v.rxservice) not in ('br','all','general') or lower(v.rxcampaignname) not like '%_br_%' or lower(v.rxcampaignname) not like '%brand%')) then 'SEM non-Br'
+    when lower(v.rxcampaign) in ('online','display','affiliate') then 'Online/Aff/Disp'
+    when lower(v.rxcampaign) = 'email' then 'Email'
+    when (lower(v.rxcampaign) in ('onsite','','wps','b2b')) then 'Other'
+    when v.rxcampaign is null then 'Other'
+    else 'Other'
+  end as Referrer_Category,  
+  count(distinct v.sessionid) as 'Visits',
+  count(distinct v.visitorid) as 'Visitors',
+  count(distinct case when pageViews = 1 then v.visitorid end) as 'Total_Bounced',
+  --count(distinct case when v.signup = true and v.role = 'seeker' then v.memberid end) as 'New_Seekers',
+  --count(distinct case when v.signup = true and v.role = 'provider' then v.memberid end) as 'New_Providers'
+  count(distinct case when (entryUrl in ('/','/de-ch/','/en-gb/','/en-au/','/en-ca/','/en-nz/','/en-ie/','/da-dk/','/es-es/','/fi-fi/','/fr-ca/','/fr-be/','/fr-fr/','/nl-nl/','/nl-be/','/sv-se/','/no-no/') or lower(rxsite) like 'careus%') then visitorid end) as 'VHP_Visits',
+  count(distinct case when pageViews = 1 and (entryUrl in ('/','/de-ch/','/en-gb/','/en-au/','/en-ca/','/en-nz/','/en-ie/','/da-dk/','/es-es/','/fi-fi/','/fr-ca/','/fr-be/','/fr-fr/','/nl-nl/','/nl-be/','/sv-se/','/no-no/') or lower(rxsite) like 'careus%') then visitorid end) as 'VHP_Bounced'
+from intl.hive_visit v
+  join reporting.dw_d_date ddd on ddd.date = date(v.startdate)
+  join analytics.dw_d_date_current dc on dc.date = date(v.startdate)
+where --v.year >= 2019
+  date(v.startdate) < current_date()
+  and date(v.startdate) >= current_date()-7
+group by 1,2,3,4,5,6,7,8,9,10
