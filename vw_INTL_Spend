@@ -1,0 +1,133 @@
+select * from analytics.vw_INTL_Spend where year(date) = 2023;
+;
+drop view if exists analytics.vw_INTL_Spend
+;
+grant all on analytics.vw_INTL_Spend to reporting_ro, analytics_team;
+;
+create view analytics.vw_INTL_Spend as
+select
+  dates.date,
+  dates.date_current,
+  dates.week_start_date,
+  dates.countrycode,
+  ifnull(sem.Total_SEM_Spend,0) as 'Total_SEM_Spend',
+  ifnull(sem.Seeker_SEM_Spend,0)as 'Seeker_SEM_Spend', 
+  ifnull(sem.Provider_SEM_Spend,0) as 'Provider_SEM_Spend',
+  ifnull(fb.Total_FB_Spend,0) as 'Total_FB_Spend',
+  ifnull(fb.Seeker_FB_Spend,0) as 'Seeker_FB_Spend',
+  ifnull(fb.Provider_FB_Spend,0) as 'Provider_FB_Spend',
+  ifnull(manual.Total_OO_Spend,0) as 'Total_OO_Spend',
+  ifnull(manual.Seeker_OO_Spend,0) as 'Seeker_OO_Spend',
+  ifnull(manual.Provider_OO_Spend,0) as 'Provider_OO_Spend',
+  ifnull(manual.TV_Spend,0) as 'TV_Spend'
+
+from (
+    select co.countrycode, da.date, da.date_current, da.week_start_date
+    from (
+     select distinct --17
+       m.countrycode as 'countrycode'
+       from intl.hive_member m
+       where date(dateProfileComplete) = '2020-09-30'
+      ) co         
+    cross join (    
+     select distinct
+       ddd.date as 'date',
+       cur.Current_Date_SameDay as 'date_current',
+       ddd.week_start_date
+     from intl.hive_member m
+       join reporting.DW_D_DATE ddd on date(m.dateProfileComplete) = ddd.date
+       join analytics.DW_D_DATE_CURRENT cur on ddd.date = cur.date
+     where countrycode = 'uk'
+       and year(dateProfileComplete) >= year(now())-4
+       and date(m.dateProfileComplete) <> current_date()
+      ) da
+    ) dates
+  
+  left join ( 
+    select
+      date(s.date) as 'date',
+      s.country as 'countrycode',
+      cur.MonthToDate as 'MonthToDate',
+      cur.Current_Date_SameDay as 'date_current',
+      ifnull(sum(s.cost*fx.currency_rate),0) as 'Total_SEM_Spend',
+      ifnull(sum(case when s.campaign_type = 'Seeker' then s.cost*fx.currency_rate end),0) as 'Seeker_SEM_Spend',
+      ifnull(sum(case when s.campaign_type = 'Provider' then s.cost*fx.currency_rate end),0) as 'Provider_SEM_Spend'
+    from intl.DW_F_CAMPAIGN_SPEND_INTL s
+      join reporting.DW_D_DATE ddd on date(s.date) = ddd.date
+      join analytics.DW_D_DATE_CURRENT cur on ddd.date = cur.date
+      join reporting.DW_CARE_FX_RATES fx on fx.source_currency = s.currency
+          and fx.target_currency = 'USD'
+          and fx.currency_rate_type = 'Current'
+    where year(s.date) >= year(now())-4
+    group by 1,2,3,4
+    ) sem on dates.date = sem.date and dates.countrycode = sem.countrycode
+    
+  left join (
+    select
+      date(date_start) as 'date',
+      case when lower(Country) in ('en','ca') then 'ca'
+           when lower(Country) in ('ve','de') then 'de'
+           when lower(Country) in ('au','_') then 'au'
+           else lower(Country)
+           end as 'countrycode',
+      ifnull(sum(fb.spend*fx.currency_rate),0) as 'Total_FB_Spend',
+      ifnull(sum(case when campaign_type = 'seeker' then fb.spend*fx.currency_rate end),0) as 'Seeker_FB_Spend',
+      ifnull(sum(case when campaign_type = 'provider' then fb.spend*fx.currency_rate end),0) as 'Provider_FB_Spend'
+    from intl.DW_F_FACEBOOK_SPEND_INTL fb
+      join reporting.DW_CARE_FX_RATES fx on fx.source_currency = fb.currency
+          and fx.target_currency = 'USD'
+          and fx.currency_rate_type = 'Current'
+    where year(date_start) >= year(now())-4
+    group by 1,2
+    ) fb on dates.countrycode = fb.countrycode and dates.date = fb.date
+    
+  left join (
+    select
+      unioned.date,
+      unioned.countrycode,
+      unioned.source_currency,
+      ifnull((sum(unioned.Seeker_OO_Spend*fx.currency_rate)+sum(Provider_OO_Spend*fx.currency_rate)),0) as 'Total_OO_Spend',
+      ifnull(sum(unioned.Seeker_OO_Spend*fx.currency_rate),0) as 'Seeker_OO_Spend',
+      ifnull(sum(unioned.TV_Spend*fx.currency_rate),0) as 'TV_Spend',
+      ifnull(sum(unioned.Provider_OO_Spend*fx.currency_rate),0) as 'Provider_OO_Spend'
+        from (
+          select spend_date as 'date', 'de' as 'countrycode', 'EUR' as 'source_currency', DE_OTHER_ONLINE+DE_Seeker_Nebenan+DE_Seeker_Mibaby+DE_Seeker_Pinterest+DE_SEEKER_SPOTIFY as 'Seeker_OO_Spend', DE_TV as 'TV_Spend', DE_Provider+DE_Provider_Myperfectjob+DE_Provider_Nebenan+DE_Provider_Mibaby+DE_Provider_AppCast+DE_PROVIDER_ALLESKRALLE+DE_PROVIDER_JOBLIFT as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'at' as 'countrycode', 'EUR' as 'source_currency', AT_OTHER_ONLINE as 'Seeker_OO_Spend', AT_TV as 'TV_Spend', AT_Provider+AT_PROVIDER_ALLESKRALLE as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'ch' as 'countrycode', 'EUR' as 'source_currency', CH_OTHER_ONLINE as 'Seeker_OO_Spend', CH_TV as 'TV_Spend', CH_Provider+CH_PROVIDER_ALLESKRALLE as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'fr' as 'countrycode', 'EUR' as 'source_currency', FR_OTHER_ONLINE as 'Seeker_OO_Spend', FR_TV as 'TV_Spend', FR_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'be' as 'countrycode', 'EUR' as 'source_currency', BE_OTHER_ONLINE as 'Seeker_OO_Spend', BE_TV as 'TV_Spend', BE_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'fb' as 'countrycode', 'EUR' as 'source_currency', FB_OTHER_ONLINE as 'Seeker_OO_Spend', FB_TV as 'TV_Spend', FB_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'dk' as 'countrycode', 'EUR' as 'source_currency', DK_OTHER_ONLINE as 'Seeker_OO_Spend', DK_TV as 'TV_Spend', DK_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'fi' as 'countrycode', 'EUR' as 'source_currency', FI_OTHER_ONLINE as 'Seeker_OO_Spend', FI_TV as 'TV_Spend', FI_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'nl' as 'countrycode', 'EUR' as 'source_currency', NL_OTHER_ONLINE as 'Seeker_OO_Spend', NL_TV as 'TV_Spend', NL_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'se' as 'countrycode', 'EUR' as 'source_currency', SE_OTHER_ONLINE as 'Seeker_OO_Spend', SE_TV as 'TV_Spend', SE_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'ie' as 'countrycode', 'EUR' as 'source_currency', IE_OTHER_ONLINE as 'Seeker_OO_Spend', IE_TV as 'TV_Spend', IE_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union          
+          select spend_date as 'date', 'es' as 'countrycode', 'EUR' as 'source_currency', ES_OTHER_ONLINE as 'Seeker_OO_Spend', ES_TV as 'TV_Spend', ES_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'au' as 'countrycode', 'EUR' as 'source_currency', AU_OTHER_ONLINE+AU_Seeker_Pinterest as 'Seeker_OO_Spend', AU_TV as 'TV_Spend', AU_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'no' as 'countrycode', 'EUR' as 'source_currency', NO_OTHER_ONLINE as 'Seeker_OO_Spend', NO_TV as 'TV_Spend', NO_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'nz' as 'countrycode', 'EUR' as 'source_currency', NZ_OTHER_ONLINE as 'Seeker_OO_Spend', NZ_TV as 'TV_Spend', NZ_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'uk' as 'countrycode', 'EUR' as 'source_currency', UK_OTHER_ONLINE+UK_Seeker_Pinterest as 'Seeker_OO_Spend', UK_TV as 'TV_Spend', UK_Provider+UK_Provider_AppCast as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+            union
+          select spend_date as 'date', 'ca' as 'countrycode', 'EUR' as 'source_currency', CA_OTHER_ONLINE+CA_Seeker_Pinterest as 'Seeker_OO_Spend', CA_TV as 'TV_Spend', CA_Provider as 'Provider_OO_Spend' from intl.DW_MARKETING_SPEND_INTL
+          ) unioned
+          join reporting.DW_CARE_FX_RATES fx on fx.source_currency = unioned.source_currency
+            and fx.target_currency = 'USD'
+            and fx.currency_rate_type = 'Current'
+        where year(unioned.date) >= year(now())-4
+      group by 1,2,3
+    ) manual on dates.date = manual.date and dates.countrycode = manual.countrycode
