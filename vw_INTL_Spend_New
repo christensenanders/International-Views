@@ -405,7 +405,12 @@ from (
     union
     select distinct spend_date as date, 'provider' as role, 'AppCast' as source, 'uk' as country, 'OV' as vertical, 'GBP' as currency, ifnull(sum(uk_provider_appcast),0) as spend
       from intl.DW_MARKETING_SPEND_INTL where year(spend_date) >= year(now())-4 and spend_date < date(current_date) group by 1,2,3,4,5,6
-    
+  
+  union
+    -- Offline_Flyers
+    select distinct spend_date as date, 'seeker' as role, 'Offline' as source, 'de' as country, 'CC' as vertical, 'EUR' as currency, ifnull(sum(DE_OTHER_ONLINE),0) as spend
+      from intl.DW_MARKETING_SPEND_INTL where year(spend_date) >= year(now())-4 and spend_date < date(current_date) group by 1,2,3,4,5,6  
+
   union 
 
   -- MY PERFECT JOB 
