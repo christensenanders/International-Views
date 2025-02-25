@@ -384,7 +384,7 @@ union
          when country = 'United Kingdom' then 'UK' else country end as country,  
     'EUR' as currency,
     sum(total_spent_usd) as spend           
-  from PRD_DB_CARE_BMW.TEST.APPJOBS_SPEND_HIST
+  from PRD_DB_CARE_DATA_MARTS.DM_INTL.APPJOBS_SPEND
   group by 1,2,3,4,5,6 
 ),
 
