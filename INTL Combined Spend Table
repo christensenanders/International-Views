@@ -21,7 +21,7 @@ select distinct
     upper(country) as country, 
     currency,
     sum(cost) as spend
-from PRD_DB_CARE_BMW.VS_DS.CAMPAIGN_SPEND_INTL_combine 
+from PRD_DB_CARE_DATA_MARTS.DM_INTL.V_CAMPAIGN_SPEND_F_INTL 
 where country is not null 
     and date(date) < date(current_date) 
 group by 1,2,3,4,5,6
@@ -44,7 +44,7 @@ select distinct
       else upper(country) end as country, 
     currency,
     sum(spend) as spend
-from PRD_DB_CARE_BMW.VS_DS.FACEBOOK_CAMPAIGN_PERFORMANCE_REPORT_combine
+from PRD_DB_CARE_DATA_MARTS.DM_INTL.V_FACEBOOK_SPEND_F_INTL
 group by 1,2,3,4,5,6
 
 union
