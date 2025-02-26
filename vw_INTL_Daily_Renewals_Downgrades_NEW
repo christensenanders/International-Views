@@ -10,14 +10,14 @@ with renewals as (
       sp.countrycode, sp.subscriptionid, case when lower(m.device) = 'smartphone' then 'Mobile' when (m.device = '' or m.device is null) then 'Mobile' else initcap(lower(m.device)) end as user_device,
       initcap(m.role) as  member_type, case when lower(m.vertical) = 'homecare' then 'Housekeeping' when (m.vertical is null or m.vertical = '') then 'Childcare' else initcap(m.vertical) end as vertical,    
       sp.priceplandurationinmonths as subscription_length, cc.payment_type,  
-      ceiling(trunc(datediff(month,sp.subscriptiondatecreated, t.when_processed)/sp.pricePlanDurationInMonths)) as ranking   
-    from intl.hive_subscription_plan sp
-      join intl.hive_member m on sp.countrycode = m.countrycode and sp.memberid = m.memberid and m.IsInternalAccount = 'false' and m.role is not null
-      join intl.transaction t on t.country_code = sp.countrycode and t.member_id = sp.memberid and t.subscription_plan_id = sp.subscriptionid 
+      ceil(trunc(datediff(month,sp.subscriptiondatecreated, t.when_processed)/sp.pricePlanDurationInMonths)) as ranking   
+    from PRD_DB_DATA_LAKE.INTL_VIEWS.V_SUBSCRIPTION_PLAN sp
+      join PRD_DB_CARE_DATA_MARTS.DM_INTL.INTL_MEMBER m on sp.countrycode = m.countrycode and sp.memberid = m.memberid and m.IsInternalAccount = 'false' and m.role is not null
+      join PRD_DB_DATA_LAKE.INTL_VIEWS.V_TRANSACTION t on t.country_code = sp.countrycode and t.member_id = sp.memberid and t.subscription_plan_id = sp.subscriptionid 
         and t.type in ('PriorAuthCapture','AuthAndCapture') and t.status = 'SUCCESS' and t.amount > 0
-      join intl.credit_card cc on cc.id = t.credit_card_id and t.member_id = cc.member_id and t.country_code = cc.country_code
-      join reporting.dw_d_date ddd on date(t.when_processed) = ddd.date  and ddd.year >= 2019 and ddd.date < date(current_date)
-      left join analytics.dw_d_date_current dc on dc.date = ddd.date
+      join PRD_DB_DATA_LAKE.INTL_VIEWS.V_CREDIT_CARD cc on cc.id = t.credit_card_id and t.member_id = cc.member_id and t.country_code = cc.country_code
+      join PRD_DB_CARE_DATA_MARTS.RPT_REPORTING.DW_D_DATE ddd on date(t.when_processed) = ddd.date and ddd.year >= 2019 and ddd.date < date(current_date)
+      left join PRD_DB_CARE_DATA_MARTS.DM_CARE_CORE.DW_D_DATE_CURRENT dc on dc.date = ddd.date
     where date(sp.subscriptiondatecreated) < date(current_date)
     group by 1,2,3,4,5,6,7,8,9,10,11) a
   where ranking > 0
@@ -35,14 +35,14 @@ downgrades as (
           sp.countrycode, sp.subscriptionid, case when lower(m.device) = 'smartphone' then 'Mobile' when (m.device = '' or m.device is null) then 'Mobile' else initcap(lower(m.device)) end as user_device,
           initcap(m.role) as  member_type, case when lower(m.vertical) = 'homecare' then 'Housekeeping' when (m.vertical is null or m.vertical = '') then 'Childcare' else initcap(m.vertical) end as vertical,    
           sp.priceplandurationinmonths as subscription_length, cc.payment_type,  
-          ceiling(trunc(datediff(month,sp.subscriptiondatecreated, sp.subscriptionenddate)/sp.pricePlanDurationInMonths)) as ranking 
-        from intl.hive_subscription_plan sp
-          join intl.hive_member m on sp.countrycode = m.countrycode and sp.memberid = m.memberid and m.IsInternalAccount = 'false' and m.role is not null
-          join intl.transaction t on t.country_code = sp.countrycode and t.member_id = sp.memberid and t.subscription_plan_id = sp.subscriptionid 
+          ceil(trunc(datediff(month,sp.subscriptiondatecreated, sp.subscriptionenddate)/sp.pricePlanDurationInMonths)) as ranking 
+        from PRD_DB_DATA_LAKE.INTL_VIEWS.V_SUBSCRIPTION_PLAN sp
+          join PRD_DB_CARE_DATA_MARTS.DM_INTL.INTL_MEMBER m on sp.countrycode = m.countrycode and sp.memberid = m.memberid and m.IsInternalAccount = 'false' and m.role is not null
+          join PRD_DB_DATA_LAKE.INTL_VIEWS.V_TRANSACTION t on t.country_code = sp.countrycode and t.member_id = sp.memberid and t.subscription_plan_id = sp.subscriptionid 
             and t.type in ('PriorAuthCapture','AuthAndCapture') and t.status = 'SUCCESS' and t.amount > 0
-          join intl.credit_card cc on cc.id = t.credit_card_id and t.member_id = cc.member_id and t.country_code = cc.country_code
-          join reporting.dw_d_date ddd on ddd.date = date(sp.subscriptionenddate) and ddd.date < date(current_date) and ddd.year >= 2019
-          left join analytics.dw_d_date_current dc on dc.date = ddd.date
+          join PRD_DB_DATA_LAKE.INTL_VIEWS.V_CREDIT_CARD cc on cc.id = t.credit_card_id and t.member_id = cc.member_id and t.country_code = cc.country_code
+          join PRD_DB_CARE_DATA_MARTS.RPT_REPORTING.DW_D_DATE ddd on ddd.date = date(sp.subscriptionenddate) and ddd.date < date(current_date) and ddd.year >= 2019
+          left join PRD_DB_CARE_DATA_MARTS.DM_CARE_CORE.DW_D_DATE_CURRENT dc on dc.date = ddd.date
           where date(sp.subscriptiondatecreated) < date(current_date)
           group by 1,2,3,4,5,6,7,8,9,10,11
       ) a
